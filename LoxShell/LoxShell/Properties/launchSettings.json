@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LoxShell": {
+      "commandName": "Project",
+      "commandLineArgs": "sample.lox"
+    }
+  }
+}
