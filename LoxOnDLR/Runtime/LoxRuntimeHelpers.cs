@@ -84,21 +84,25 @@ namespace LoxOnDLR.Runtime
 
         public static void ThrowIfNotCallable(object thing, int line)
         {
-            if (thing == null || thing.GetType().IsPrimitive
-                || thing.GetType() == typeof(string)
-                || thing.GetType() == typeof(Lox.Nothing)
-                || thing.GetType() == typeof(LoxObject))
+            if (thing == null) throw new LoxRuntimeException("Can only call functions and classes.", line);
+            var t = thing.GetType();
+            if (t.IsPrimitive
+                || t == typeof(string)
+                || t == typeof(Lox.Nothing)
+                || t == typeof(LoxObject))
                 throw new LoxRuntimeException("Can only call functions and classes.", line);
         }
 
         public static void ThrowIfNotSupportingFields(object thing, int line, string fieldPropLabel)
         {
-            if (thing == null || thing.GetType().IsPrimitive
-                || thing.GetType() == typeof(string)
-                || thing.GetType() == typeof(Lox.Nothing)
-                || thing.GetType() == typeof(LoxFunction)
-                || thing.GetType() == typeof(LoxInstanceMethod)
-                || thing.GetType() == typeof(LoxClassConstructorFunction))
+            if (thing == null) throw new LoxRuntimeException($"Only instances have {fieldPropLabel}.", line); 
+            var t = thing.GetType();
+            if (t.IsPrimitive
+                || t == typeof(string)
+                || t == typeof(Lox.Nothing)
+                || t == typeof(LoxFunction)
+                || t == typeof(LoxInstanceMethod)
+                || t == typeof(LoxClassConstructorFunction))
                 throw new LoxRuntimeException($"Only instances have {fieldPropLabel}.", line);
         }
     }

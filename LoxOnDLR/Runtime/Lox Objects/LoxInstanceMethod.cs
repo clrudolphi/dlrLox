@@ -22,8 +22,13 @@
 
         public override object Invoke(object[] args)
         {
-            args = (new object[] { Instance }).Concat(args).ToArray();
-            return base.Invoke(args);
+            // prepend the instance
+            int numArgs = args.Length;
+            object[] argsCopy = new object[numArgs + 1];
+            argsCopy[0] = Instance;
+            args.CopyTo(argsCopy, 1);
+            
+            return base.Invoke(argsCopy);
         }
 
         //public override bool TryInvoke(InvokeBinder binder, object?[]? args, out object result)
