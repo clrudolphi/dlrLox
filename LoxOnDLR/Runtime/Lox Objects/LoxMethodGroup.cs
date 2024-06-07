@@ -2,13 +2,6 @@
 
 namespace LoxOnDLR.Runtime
 {
-    public enum LoxMethodMatchType
-    {
-        First,
-        InstanceOnly,
-        SuperOnly
-    }
-
     internal class LoxMethodGroup : DynamicObject
     {
         public string Name { get; }
@@ -57,7 +50,6 @@ namespace LoxOnDLR.Runtime
 
         public override bool TryInvoke(InvokeBinder binder, object?[]? args, out object? result)
         {
-            var b = binder as LoxInvokeBinder;
             return TryInvoke(args, out result);
         }
 
@@ -78,21 +70,5 @@ namespace LoxOnDLR.Runtime
             }
         }
 
-        //public override bool TryInvokeMember(InvokeMemberBinder binder, object?[]? args, out object? result)
-        //{
-        //    LoxInstanceMethod meth = null;
-        //    int numArgs = args == null ? 0 : args.Length;
-        //    bool found = TryResolve(numArgs, out meth, SearchStrategy);
-        //    if (found)
-        //    {
-        //        result = meth.Invoke(args);
-        //        return true;
-        //    }
-        //    else
-        //    {
-        //        result = null;
-        //        return false;
-        //    }
-        //}
     }
 }

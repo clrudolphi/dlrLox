@@ -7,8 +7,11 @@ namespace LoxOnDLR.Runtime
     {
         public readonly string ClassName;
         private readonly string SuperclassName;
-        private readonly LoxPrototype Superclass;
-        internal readonly Dictionary<string, LoxFunction> ProtoMethods = new();
+        private readonly LoxPrototype? Superclass;
+
+        internal  Dictionary<string, LoxProtoMethodGroup> ProtoMethodGroups = new();
+        internal  Dictionary<string, LoxProtoMethodGroup> SuperMethodGroups;
+
         private static LoxRuntime _runtime;
         internal int DeclaredOnLineNumber;
 
@@ -19,7 +22,21 @@ namespace LoxOnDLR.Runtime
             SuperclassName = superclassName;
             Superclass = superclassName == String.Empty ? null : FetchProto(superclassName);
             DeclaredOnLineNumber = declarationLineNumber;
+            this.SuperMethodGroups = Superclass?.ProtoMethodGroups.ToDictionary(x => x.Key, x => x.Value) ?? new();
+
         }
+        private void DefineMethod(string name, LoxFunction method)
+        {
+            if (ProtoMethodGroups.TryGetValue(name, out var pmg))
+            {
+                pmg.AddMethod(method);
+            }
+            else
+            {
+                ProtoMethodGroups.Add(name, new LoxProtoMethodGroup(name, method));
+            }
+        }
+
 
         public static void DefineClass(string className, string superclassName, int declarationLineNumber, LoxRuntime runtime)
         {
@@ -42,12 +59,6 @@ namespace LoxOnDLR.Runtime
             var proto = FetchProto(className);
             proto.DefineMethod(methodName, method);
         }
-
-        private void DefineMethod(string name, LoxFunction method)
-        {
-            ProtoMethods.Add(name, method);
-        }
-
         public static LoxObject Create(string className)
         {
             return Create(className, Array.Empty<object>());
@@ -58,6 +69,12 @@ namespace LoxOnDLR.Runtime
             LoxPrototype loxPrototype = FetchProto(className);
             var obj = new LoxObject(className, loxPrototype);
 
+            InvokeInitFunction(className, initargs, obj);
+            return obj;
+        }
+
+        private static void InvokeInitFunction(string className, object[] initargs, LoxObject obj)
+        {
             object[] argInputs;
             if (initargs != null)
             {
@@ -85,7 +102,6 @@ namespace LoxOnDLR.Runtime
                     initMethodGroup.TryInvoke(argInputs, out var initResult);
                 }
             }
-            return obj;
         }
 
         private static LoxPrototype FetchProto(string className)

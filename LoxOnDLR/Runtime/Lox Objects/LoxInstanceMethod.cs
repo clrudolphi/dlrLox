@@ -13,15 +13,19 @@
             Instance = obj;
         }
 
-        //public LoxInstanceMethod SetInstance(LoxObject obj)
-        //{
-        //    var instantiated = new LoxInstanceMethod(Name, Arity, FuncExpr);
-        //    instantiated.Instance = obj;
-        //    return instantiated;
-        //}
+        public void SetInstance(LoxObject obj)
+        {
+            this.Instance = obj;
+        }
 
         public override object Invoke(object[] args)
         {
+            //guard:: the Instance object must not be null
+            if (Instance == null)
+            {
+                throw new LoxRuntimeException("Cannot invoke method on null instance");
+            }
+
             // prepend the instance
             int numArgs = args.Length;
             object[] argsCopy = new object[numArgs + 1];

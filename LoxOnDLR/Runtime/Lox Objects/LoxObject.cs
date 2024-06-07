@@ -1,4 +1,5 @@
 ﻿using System.Dynamic;
+using System.Runtime.CompilerServices;
 
 namespace LoxOnDLR.Runtime
 {
@@ -9,11 +10,17 @@ namespace LoxOnDLR.Runtime
         private readonly Dictionary<string, object> Fields = new();
         private LoxPrototype SearchRoot;
 
+        private Dictionary<string, LoxMethodGroup> InstanceClassMethodGroups;
+        private Dictionary<string, LoxMethodGroup> InstanceSuperMethodGroups;
+
         public LoxObject(string className, LoxPrototype prototype)
         {
             ClassName = className;
             Prototype = prototype;
             SearchRoot = prototype;
+
+            InstanceClassMethodGroups = prototype.ProtoMethodGroups.ToDictionary(x => x.Key, x => x.Value.Instantiate(this));
+            InstanceSuperMethodGroups = prototype.SuperMethodGroups.ToDictionary(x => x.Key, x => x.Value.Instantiate(this)) ?? new();
         }
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
@@ -39,33 +46,23 @@ namespace LoxOnDLR.Runtime
 
         internal bool TryGetMethodGroup(string methodName, string searchRootClassName, out object methodGroup)
         {
-            List<LoxInstanceMethod> lmg = new();
-            bool foundRootClass = false;
-            foreach (var proto in Prototype.ProtoClassHeirarchy())
+            methodGroup = null;
+            if (ClassName == searchRootClassName)
             {
-                if (proto.ClassName == searchRootClassName)
+                if (InstanceClassMethodGroups.TryGetValue(methodName, out var mg))
                 {
-                    foundRootClass = true;
-                }
-                if (foundRootClass)
-                {
-                    if (proto.ProtoMethods.TryGetValue(methodName, out var lf))
-                    {
-                        var li = new LoxInstanceMethod(this, lf);
-                        lmg.Add(li);
-                    }
+                    methodGroup = mg;
+                    return true;
                 }
             }
-            if (lmg.Count > 0)
+
+            if (InstanceSuperMethodGroups.TryGetValue(methodName, out var smg))
             {
-                methodGroup = new LoxMethodGroup(methodName, lmg);
+                methodGroup = smg;
                 return true;
             }
-            else
-            {
-                methodGroup = null;
-                return false;
-            }
+
+            return false;
         }
 
         // Note: can't climb up the chain of base classes for Setting members; can only set a member in the current class
