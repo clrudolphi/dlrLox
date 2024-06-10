@@ -7,23 +7,26 @@ namespace LoxOnDLR.Runtime
     {
         public int Arity { get; private set; }
         public string Name { get; private set; }
+        public string? ClassName { get;  set; }
 
         public Delegate Func
         {
             get; set;
         }
 
-        public LoxFunction(string name, int arity, LambdaExpression funcExpr)
+        public LoxFunction(string name, int arity, LambdaExpression funcExpr, string className = null)
         {
             Arity = arity;
             Name = name;
+            ClassName = className;
             Func = funcExpr.Compile();
         }
 
-        public LoxFunction(string name, int arity, Delegate func)
+        public LoxFunction(string name, int arity, Delegate func, string className = null)
         {
             Arity = arity;
             Name = name;
+            ClassName = className;
             Func = func;
         }
 

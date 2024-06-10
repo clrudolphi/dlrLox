@@ -3,25 +3,17 @@
     internal class LoxProtoMethodGroup
     {
         public string Name { get; }
-        internal Dictionary<int, List<LoxFunction>> _functions = new Dictionary<int, List<LoxFunction>>();
-        public LoxProtoMethodGroup(string name) { Name = name; }
+        internal Dictionary<int, LoxFunction> _functions = new ();
         public LoxProtoMethodGroup(string name, LoxFunction firstMethod) { 
             Name = name; 
-            _functions.Add(firstMethod.Arity, new List<LoxFunction>() { firstMethod }); 
+            _functions.Add(firstMethod.Arity, firstMethod ); 
         }
 
-        public void AddMethod(LoxFunction func)
+        public LoxProtoMethodGroup(string name, LoxFunction firstMethod, LoxProtoMethodGroup inheritedMethodGroup)
         {
-            if (!_functions.TryGetValue(func.Arity, out var list))
-            {
-                list = new List<LoxFunction>();
-                _functions.Add(func.Arity, list);
-            }
-            list.Add(func);
-        }
-        public LoxMethodGroup Instantiate(LoxObject obj)
-        {
-            return new LoxMethodGroup(Name, _functions.SelectMany(x => x.Value.Select(y => new LoxInstanceMethod(obj, y))));
+            Name = name;
+            _functions =inheritedMethodGroup._functions.ToDictionary(x => x.Key, x => x.Value);
+            _functions[firstMethod.Arity] = firstMethod;
         }
     }
 }

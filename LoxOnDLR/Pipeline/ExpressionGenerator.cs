@@ -226,8 +226,8 @@ namespace LoxOnDLR.Pipeline
                 // the containing scope for this function is a function. Store the Lambda for this function in a variable attached to the outer function
 
                 var variable = symbolTable.Names[functionName];
-                var funcCallable = Expression.New(typeof(LoxFunction).GetConstructor(new Type[] { typeof(string), typeof(int), typeof(LambdaExpression) }),
-                                    new Expression[] { Expression.Constant(functionName), Expression.Constant(node.Parameters.Count), funcLambda });
+                var funcCallable = Expression.New(typeof(LoxFunction).GetConstructor(new Type[] { typeof(string), typeof(int), typeof(LambdaExpression), typeof(string) }),
+                                    new Expression[] { Expression.Constant(functionName), Expression.Constant(node.Parameters.Count), funcLambda, Expression.Constant(String.Empty) });
 
                 returnExpression = Expression.Assign(variable, funcCallable);
             }
@@ -294,8 +294,8 @@ namespace LoxOnDLR.Pipeline
             foreach (var method in node.Methods)
             {
                 var methodDefinition = (((IVisitable)method).Accept(this));
-                var instanceMethod = Expression.New(typeof(LoxFunction).GetConstructor(new Type[] { typeof(string), typeof(int), typeof(LambdaExpression) }),
-                    new Expression[] { Expression.Constant(method.Name.Lexeme), Expression.Constant(method.Parameters.Count + 1), methodDefinition });
+                var instanceMethod = Expression.New(typeof(LoxFunction).GetConstructor(new Type[] { typeof(string), typeof(int), typeof(LambdaExpression), typeof(string) }),
+                    new Expression[] { Expression.Constant(method.Name.Lexeme), Expression.Constant(method.Parameters.Count + 1), methodDefinition, Expression.Constant(className) });
 
                 var defineMethodExpr = Expression.Call(
                    typeof(LoxPrototype).GetMethod("DefineMethod"),
@@ -584,7 +584,7 @@ namespace LoxOnDLR.Pipeline
                             Expression.Call(typeof(LoxRuntimeHelpers).GetMethod("ThrowIfNotSupportingFields"), RuntimeHelpers.EnsureObjectResult(obj), Expression.Constant(node.Name.Line), Expression.Constant("properties")),
                             Expression.TryCatch(
                                 Expression.Dynamic(
-                                    LoxBinders.GetGetMemberBinder(node.Name.Lexeme, null, false),
+                                    LoxBinders.GetGetMemberBinder(node.Name.Lexeme, false),
                                     typeof(object),
                                     obj),
                                 Expression.Catch(
@@ -620,7 +620,7 @@ namespace LoxOnDLR.Pipeline
                 throw new InvalidOperationException("super must be used in a method scope");
             }
             // this binder sets the start of the search chain to be the superclass of the class in current lexical scope
-            var superGetMemberBinder = LoxBinders.GetGetMemberBinder(node.Method.Lexeme, currentSuperClass, false);
+            var superGetMemberBinder = LoxBinders.GetGetSuperMemberBinder(node.Method.Lexeme, currentSuperClass, false);
             return GeneratorHelpers.Checked(
                         Expression.Dynamic(
                             superGetMemberBinder,

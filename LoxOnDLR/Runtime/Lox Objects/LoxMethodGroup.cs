@@ -5,21 +5,14 @@ namespace LoxOnDLR.Runtime
     internal class LoxMethodGroup : DynamicObject
     {
         public string Name { get; }
-        private Dictionary<int, List<LoxInstanceMethod>> _methods = new Dictionary<int, List<LoxInstanceMethod>>();
+        private LoxProtoMethodGroup _methods;
+        private LoxObject Instance { get; set; }
 
-        public LoxMethodGroup(string name, IEnumerable<LoxInstanceMethod> methods)
+        public LoxMethodGroup(LoxObject obj,string name, LoxProtoMethodGroup methods)
         {
+            Instance = obj;
             Name = name;
-            foreach (var method in methods)
-            {
-                if (!_methods.TryGetValue(method.Arity, out var list))
-                {
-                    list = new List<LoxInstanceMethod>();
-                    _methods.Add(method.Arity, list);
-                }
-
-                _methods[method.Arity].Add(method);
-            }
+            _methods = methods;
         }
 
         public override string ToString()
@@ -27,25 +20,9 @@ namespace LoxOnDLR.Runtime
             return $"<fn {Name}>";
         }
 
-        public bool TryResolve(int arity, out LoxInstanceMethod method)
+        public bool TryResolve(int arity, out LoxFunction method)
         {
-            bool found = false;
-            method = null;
-
-            if (_methods.TryGetValue(arity, out var methodlist))
-            {
-                if (methodlist.Count >= 1)
-                {
-                    method = methodlist[0];
-                    found = true;
-                }
-                else
-                {
-                    method = null;
-                    found = method != null;
-                }
-            }
-            return found;
+            return _methods._functions.TryGetValue(arity, out method);
         }
 
         public override bool TryInvoke(InvokeBinder binder, object?[]? args, out object? result)
@@ -55,18 +32,29 @@ namespace LoxOnDLR.Runtime
 
         internal bool TryInvoke(object?[]? args, out object? result)
         {
-            LoxInstanceMethod meth = null;
-            int numArgs = args == null ? 0 : args.Length;
-            bool found = TryResolve(numArgs + 1, out meth);
+            //guard:: the Instance object must not be null
+            if (Instance == null)
+            {
+                throw new LoxRuntimeException("Cannot invoke method on null instance");
+            }
+            int numArgs = args?.Length ?? 0;
+
+            LoxFunction meth = null;
+            bool found = TryResolve(numArgs + 1 , out meth);
             if (found)
             {
-                result = meth.Invoke(args);
+                // prepend the instance
+                object[] argsCopy = new object[numArgs + 1];
+                argsCopy[0] = Instance;
+                args?.CopyTo(argsCopy, 1);
+
+                result = meth.Invoke(argsCopy);
                 return true;
             }
             else
             {
-                var method = _methods.First().Value.First();
-                throw new LoxRuntimeException($"Expected {method.Arity - 1} arguments but got {numArgs}.");
+                var methodArity = _methods._functions.Keys.First();
+                throw new LoxRuntimeException($"Expected {methodArity - 1} arguments but got {numArgs}.");
             }
         }
 

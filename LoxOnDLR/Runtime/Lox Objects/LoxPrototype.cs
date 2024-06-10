@@ -3,14 +3,20 @@ using System.Dynamic;
 
 namespace LoxOnDLR.Runtime
 {
-    internal class LoxPrototype : DynamicObject
+    internal struct MethodKey
+    {
+        public string MethodName;
+        public int Depth;
+    }
+
+    internal class LoxPrototype
     {
         public readonly string ClassName;
         private readonly string SuperclassName;
         private readonly LoxPrototype? Superclass;
-
-        internal  Dictionary<string, LoxProtoMethodGroup> ProtoMethodGroups = new();
-        internal  Dictionary<string, LoxProtoMethodGroup> SuperMethodGroups;
+        internal readonly int Depth;
+        internal Dictionary<string, int> ClassDepthMap = new();
+        internal Dictionary<string, LoxProtoMethodGroup[]> ProtoMethodGroups = new();
 
         private static LoxRuntime _runtime;
         internal int DeclaredOnLineNumber;
@@ -21,22 +27,64 @@ namespace LoxOnDLR.Runtime
             ClassName = className;
             SuperclassName = superclassName;
             Superclass = superclassName == String.Empty ? null : FetchProto(superclassName);
-            DeclaredOnLineNumber = declarationLineNumber;
-            this.SuperMethodGroups = Superclass?.ProtoMethodGroups.ToDictionary(x => x.Key, x => x.Value) ?? new();
+            Depth = Superclass == null ? 0 : (Superclass!.Depth) + 1;
+            SetupDepthMap();
+            CopyProtoDepthMap();
 
+            DeclaredOnLineNumber = declarationLineNumber;
+
+            void SetupDepthMap()
+            {
+                if (Superclass != null) ClassDepthMap = Superclass!.ClassDepthMap.ToDictionary(x => x.Key, x => x.Value);
+                ClassDepthMap[ClassName] = Depth;
+            }
+
+
+            void CopyProtoDepthMap()
+            {
+                if (Depth > 0)
+                {
+                    foreach (var protoList in Superclass!.ProtoMethodGroups)
+                    {
+                        string methodName = protoList.Key;
+                        var pmgArray = protoList.Value;
+                        var newPmgArray = new LoxProtoMethodGroup[Depth + 1];
+                        ProtoMethodGroups[methodName] = newPmgArray;
+                        pmgArray.CopyTo(ProtoMethodGroups[methodName], 0);
+                        newPmgArray[Depth] = newPmgArray[Depth - 1];
+                    }
+                }
+            }
         }
         private void DefineMethod(string name, LoxFunction method)
         {
-            if (ProtoMethodGroups.TryGetValue(name, out var pmg))
+
+            method.ClassName = ClassName;
+
+            if (!ProtoMethodGroups.TryGetValue(name, out LoxProtoMethodGroup[]? pmg))
             {
-                pmg.AddMethod(method);
+                pmg = new LoxProtoMethodGroup[Depth + 1];
+                ProtoMethodGroups.Add(name, pmg);
+                pmg[Depth] = new LoxProtoMethodGroup(name, method);
             }
             else
             {
-                ProtoMethodGroups.Add(name, new LoxProtoMethodGroup(name, method));
+                pmg[Depth] = new LoxProtoMethodGroup(name, method, pmg[Depth-1]);
             }
         }
 
+        public LoxProtoMethodGroup? FindMethodGroup(string name, string searchRootClassName)
+        {
+            string searchRoot = searchRootClassName;
+            string currentClassName = ClassName;
+
+            int fetchDepth = ClassDepthMap[searchRootClassName];
+            if (ProtoMethodGroups.TryGetValue(name, out var result))
+            {
+                return result[fetchDepth];
+            }
+            return null;
+        }
 
         public static void DefineClass(string className, string superclassName, int declarationLineNumber, LoxRuntime runtime)
         {
@@ -68,40 +116,8 @@ namespace LoxOnDLR.Runtime
         {
             LoxPrototype loxPrototype = FetchProto(className);
             var obj = new LoxObject(className, loxPrototype);
-
-            InvokeInitFunction(className, initargs, obj);
+            obj.InvokeInitFunction(initargs);
             return obj;
-        }
-
-        private static void InvokeInitFunction(string className, object[] initargs, LoxObject obj)
-        {
-            object[] argInputs;
-            if (initargs != null)
-            {
-                if (initargs is IEnumerable)
-                {
-                    argInputs = ((IEnumerable)initargs).Cast<object>().ToArray();
-                }
-                else
-                {
-                    argInputs = new object[] { initargs };
-                }
-            }
-            else
-            {
-                argInputs = Array.Empty<object>();
-            }
-            int argCount = argInputs.Length;
-
-            var methodKey = "init";
-            if (obj.TryGetMethodGroup(methodKey, className, out var result))
-            {
-                var initMethodGroup = result as LoxMethodGroup;
-                if (initMethodGroup != null)
-                {
-                    initMethodGroup.TryInvoke(argInputs, out var initResult);
-                }
-            }
         }
 
         private static LoxPrototype FetchProto(string className)

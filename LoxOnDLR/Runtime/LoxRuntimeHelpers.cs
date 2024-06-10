@@ -101,7 +101,6 @@ namespace LoxOnDLR.Runtime
                 || t == typeof(string)
                 || t == typeof(Lox.Nothing)
                 || t == typeof(LoxFunction)
-                || t == typeof(LoxInstanceMethod)
                 || t == typeof(LoxClassConstructorFunction))
                 throw new LoxRuntimeException($"Only instances have {fieldPropLabel}.", line);
         }

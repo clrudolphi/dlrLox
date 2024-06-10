@@ -1,12 +1,15 @@
 ﻿using System.Dynamic;
+using System.Xml.Linq;
 
 namespace LoxOnDLR.Runtime
 {
-    public class LoxGetMemberBinder : GetMemberBinder
+    internal class LoxGetSuperMemberBinder : GetMemberBinder
     {
+        public readonly string? StartSearchInClassName;
 
-        public LoxGetMemberBinder(string name, bool ignoreCase) : base(name, ignoreCase)
+        public LoxGetSuperMemberBinder(string name, string? startSearchInClassName, bool ignoreCase) : base(name, ignoreCase)
         {
+            this.StartSearchInClassName = startSearchInClassName;
         }
 
         public override DynamicMetaObject FallbackGetMember(DynamicMetaObject targetMO, DynamicMetaObject? errorSuggestion)
@@ -17,8 +20,9 @@ namespace LoxOnDLR.Runtime
                     targetMO, null,
                     BindingRestrictions.GetTypeRestriction(targetMO.Expression,
                                                            targetMO.LimitType),
-                    typeof(LoxRuntimeException),
+            typeof(LoxRuntimeException),
                     "Undefined property '" + Name + "'.");
         }
+
     }
 }
